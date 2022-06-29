@@ -1,0 +1,7 @@
+numpy
+web3 # Smart contract driver
+FastAPI # API library
+uvicorn # Web server
+pymongo # Mongo driver
+pymongo_inmemory # In memory mongo driver
+#pprint
