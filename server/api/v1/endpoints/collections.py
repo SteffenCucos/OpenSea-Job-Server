@@ -30,17 +30,15 @@ def download_collection(
 ) -> str:
     # Check if a job is already running
     # We don't have an Id here, so the collectionName + status will be our key
-    mightExist = jobDAO.find_one_by_condition(
+    if job := jobDAO.find_one_by_condition(
         condition = {
             "collectionName": collectionName,
             "status": {
                 "$ne" : Status.FINISHED.value
             }
         }
-    )
-
-    if mightExist:
-        return mightExist._id
+    ):
+        return job._id
 
     # Create the job, insert it into the db, then start it.
     job = CollectionLoadJob(collectionName)
@@ -56,8 +54,7 @@ def get_collection_distribution(
     collectionName: str,
     distributionDAO: DistributionDAO = Depends(DistributionDAO)
 ):
-    distribution = distributionDAO.find_one_by_condition({"collectionName": collectionName})
-    if distribution:
+    if distribution := distributionDAO.find_one_by_condition({"collectionName": collectionName}):
         return distribution
     
     raise NotFoundException("No distribution found for {}".format(collectionName))
@@ -68,8 +65,7 @@ def get_token(
     tokenNumber: int,
     tokenDAO: TokenDAO = Depends(TokenDAO)
 ) -> Token:
-    token = tokenDAO.find_one_by_id(tokenNumber)
-    if token:
+    if token := tokenDAO.find_one_by_id(tokenNumber):
         return token
 
     raise NotFoundException("No token found with num {} in collection {}".format(tokenNumber, collectionName))

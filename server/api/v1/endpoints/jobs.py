@@ -16,8 +16,7 @@ def get_status(
     jobDAO: JobDAO = Depends(JobDAO)
 ) -> CollectionLoadJob:
     # Check for a running job
-    mightExist = jobDAO.find_one_by_id(jobId)
-    if mightExist:
-        return mightExist
+    if job := jobDAO.find_one_by_id(jobId):
+        return job
         
     raise NotFoundException("No job was found with Id {}".format(jobId))
