@@ -18,15 +18,19 @@ class Status(Enum):
 class CollectionLoadJob():
     def __init__(self, 
                 collectionName: str, 
-                progress: float = 0.0, 
+                progress: float = 0.0,
+                loaded: int = 0,
+                total: int = 0,
                 status: Status = Status.CREATED, 
-                _id: Id = None):
+                error: str = "",
+                _id: Id = None
+                ):
         self.collectionName = collectionName
         self.progress = progress
-        self.loaded = 0
-        self.total = 0
+        self.loaded = loaded
+        self.total = total
         self.status = status.value
-        self.error: str = ""
+        self.error = error
         if _id == None:
             _id = create_id()
         self._id = _id
