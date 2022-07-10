@@ -62,7 +62,7 @@ class CollectionService():
             collectionLoadJob.progress = 1.0
             self.jobDAO.update(collectionLoadJob)
 
-            distribution = Distribution(metadata.collectionName, CollectionService.compute_distribution(tokens))
+            distribution = Distribution(metadata.collectionName, CollectionService.compute_distribution(tokens, metadata.collectionSize))
             self.distributionDAO.save(distribution)
 
             self.jobDAO.update_status(collectionLoadJob, Status.FINISHED)
