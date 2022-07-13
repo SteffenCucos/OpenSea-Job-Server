@@ -45,7 +45,7 @@ class TokenService():
             traitsAddress = "https://ipfs.io/ipfs/" + traitsAddress.replace("ipfs://", "")
         # strip the ID and prepare it for string formatting
         return traitsAddress[:-1] + "{}"
-
+    
     def get_token_function(self, collectionLoadJob: CollectionLoadJob):
         lock = Lock()
 
@@ -73,12 +73,12 @@ class TokenService():
             # Ensure strictly increasing counts
             lock.acquire()
             token = Token(success, num=tokenId, url=url, traits=traits)
-            print("Got Token", tokenId)
+            #print("Got Token", tokenId)
             # Save tokens in batches
             batch.append(token)
 
-            if len(batch) % 10 == 0 or tokenId == totalCount:
-                print("Saving batch #{} size {}".format(batchNum[0], len(batch)))
+            if len(batch) % 25 == 0 or tokenId == totalCount:
+                print(collectionName + ": saving batch #{} size {}".format(batchNum[0], len(batch)))
                 batchNum[0] += 1
                 self.save_batch(batch, collectionLoadJob, tokenDAO)
                 batch.clear()
@@ -94,12 +94,9 @@ class TokenService():
         collectionLoadJob: CollectionLoadJob,
         tokenDAO: TokenDAO
     ):
-        print("Starting Save")
-        for token in batch:
-            if token.success == False:
-                break;
+        #print("Starting Save")
         tokenDAO.save_many(batch)
-        print("Finished Save")
+        #print("Finished Save")
         collectionLoadJob.increment_loaded(len(batch))
         self.jobDAO.update(collectionLoadJob)
 
