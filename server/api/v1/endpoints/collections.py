@@ -65,7 +65,7 @@ def get_token(
     tokenNumber: int,
     tokenDAO: TokenDAO = Depends(TokenDAO)
 ) -> Token:
-    if token := tokenDAO.find_one_by_id(tokenNumber):
+    if token := tokenDAO.find_one_by_id(str(tokenNumber)):
         return token
 
     raise NotFoundException("No token found with num {} in collection {}".format(tokenNumber, collectionName))
