@@ -1,8 +1,11 @@
+from pyclbr import Function
 from fastapi import Depends
 
 import json
 
 from threading import Lock
+from multiprocessing.pool import ThreadPool as Pool
+
 from web3 import Web3
 
 from models.token import Token
@@ -25,6 +28,59 @@ from requests.sessions import Session
 import logging
 logger = logging.getLogger(__name__) 
 
+class TokenProssesor():
+    def __init__(self, traitsAddress: str, collectionLoadJob: CollectionLoadJob, save_batch: Function):
+        self.traitsAddress = traitsAddress
+        self.collectionLoadJob = collectionLoadJob
+        self.save_batch = save_batch
+        self.tokenDAO = TokenDAO(get_tokens_collection(collectionLoadJob.collectionName))
+        self.http = get_retry_http()
+
+        self.lock = Lock()
+        self.batch = []
+        self.batchNum = [1]
+
+    def get_token_function(self):
+        def get_token(tokenId: int) -> Token:
+            url = self.traitsAddress.format(tokenId)
+            try:
+                response = self.http.get(url)
+                success = True
+                traits = deserialize(json.loads(response.text)["attributes"], list[Trait])
+            except Exception as error:
+                print(error)
+                success = False
+                traits = None
+
+            # Ensure strictly increasing counts
+            self.lock.acquire()
+            token = Token(success, num=tokenId, url=url, traits=traits)
+            # Save tokens in batches
+            self.batch.append(token)
+
+            if len(self.batch) % 25 == 0 or tokenId == self.collectionLoadJob.total:
+                print("{}: saving batch #{} size {}".format(self.collectionLoadJob.collectionName, self.batchNum[0], len(self.batch)))
+                self.batchNum[0] += 1
+                self.save_batch(self.batch, self.collectionLoadJob, self.tokenDAO)
+                self.batch.clear()
+
+            self.lock.release()
+            return token
+        return get_token
+    
+    def get_tokens(self, parallelism: int) -> list[Token]:
+        tokens = []
+        with Pool(parallelism) as pool:
+            func = self.get_token_function()
+            tokens = pool.map(func, [id for id in range(1, int(self.collectionLoadJob.total) + 1)])
+
+        # There may be some unsaved tokens
+        if len(self.batch) > 0:
+            print("{}: saving batch #{} size {}".format(self.collectionLoadJob.collectionName, self.batchNum[0], len(self.batch)))
+            self.save_batch(self.batch, self.collectionLoadJob, self.tokenDAO)
+
+        return tokens
+
 class TokenService():
     def __init__(self,
         http: Session = Depends(get_retry_http),
@@ -38,56 +94,27 @@ class TokenService():
         self.metadataService = metadataService
         self.jobDAO = jobDAO
 
-    def get_token_uri(self, contractAddress: str, contractABI: str) -> str:
-        contract = self.w3.eth.contract(address = Web3.toChecksumAddress(contractAddress), abi = contractABI)
-        traitsAddress = contract.functions.tokenURI(1).call()
-        if traitsAddress.find("ipfs://") >= 0:
-            traitsAddress = "https://ipfs.io/ipfs/" + traitsAddress.replace("ipfs://", "")
-        # strip the ID and prepare it for string formatting
-        return traitsAddress[:-1] + "{}"
-    
-    def get_token_function(self, collectionLoadJob: CollectionLoadJob):
-        lock = Lock()
-
+    def get_token_processor(self, collectionLoadJob: CollectionLoadJob) -> TokenProssesor:
         metadata = self.metadataService.get_metadata(collectionLoadJob.collectionName)
         contractAddess = metadata.contractAddress
         contractABI = metadata.contractABI
         totalCount = metadata.collectionSize
         collectionName = metadata.collectionName
         traitsAddress = self.get_token_uri(contractAddess, contractABI)
-        
-        batch = []
-        batchNum = [1]
-        tokenDAO: TokenDAO = TokenDAO(get_tokens_collection(collectionName))
 
-        def get_token(tokenId: int) -> Token:
-            url = traitsAddress.format(tokenId)
-            try:
-                response = self.http.get(url)
-                success = True
-                traits = deserialize(json.loads(response.text)["attributes"], list[Trait])
-            except:
-                success = False
-                traits = None
+        return TokenProssesor(traitsAddress, collectionLoadJob, self.save_batch)
 
-            # Ensure strictly increasing counts
-            lock.acquire()
-            token = Token(success, num=tokenId, url=url, traits=traits)
-            #print("Got Token", tokenId)
-            # Save tokens in batches
-            batch.append(token)
+    def get_token_uri(self, contractAddress: str, contractABI: str) -> str:
+        contract = self.w3.eth.contract(address = Web3.toChecksumAddress(contractAddress), abi = contractABI)
+        traitsAddress: str = contract.functions.tokenURI(1).call()
+        if traitsAddress.find("ipfs://") >= 0:
+            traitsAddress = "https://ipfs.io/ipfs/" + traitsAddress.replace("ipfs://", "")
+        # strip the ID and prepare it for string formatting
+        lastIndex = indices = [i for i, c in enumerate(traitsAddress) if c == "1"][-1]
 
-            if len(batch) % 25 == 0 or tokenId == totalCount:
-                print(collectionName + ": saving batch #{} size {}".format(batchNum[0], len(batch)))
-                batchNum[0] += 1
-                self.save_batch(batch, collectionLoadJob, tokenDAO)
-                batch.clear()
+        traitsAddress = traitsAddress[:lastIndex] + "{}" + traitsAddress[lastIndex + 1:]
+        return traitsAddress
 
-            lock.release()
-            return token
-        return get_token
-
-    # Move this into collection_service, or pass a callback
     def save_batch(
         self,
         batch: list[Token],
@@ -99,6 +126,4 @@ class TokenService():
         #print("Finished Save")
         collectionLoadJob.increment_loaded(len(batch))
         self.jobDAO.update(collectionLoadJob)
-
-        
 

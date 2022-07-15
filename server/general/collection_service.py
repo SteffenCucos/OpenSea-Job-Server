@@ -21,6 +21,7 @@ from general.token_service import TokenService
 import logging
 
 from db.mongodb import get_tokens_collection
+
 logger = logging.getLogger(__name__) 
 
 class CollectionService():
@@ -52,17 +53,14 @@ class CollectionService():
             collectionLoadJob.status = Status.LOADING
             self.jobDAO.update(collectionLoadJob)
             # Get tokens
-            parallelism = 10
-
-            tokens = []
-            with Pool(parallelism) as pool:
-                get_token = self.tokenService.get_token_function(collectionLoadJob)
-                tokens = pool.map(get_token, [id for id in range(1, int(metadata.collectionSize) + 1)])
+            tokenProssesor = self.tokenService.get_token_processor(collectionLoadJob)
+            tokens = tokenProssesor.get_tokens(parallelism=20)
                 
             collectionLoadJob.progress = 1.0
             self.jobDAO.update(collectionLoadJob)
 
-            distribution = Distribution(metadata.collectionName, CollectionService.compute_distribution(tokens, metadata.collectionSize))
+            distribution = Distribution(metadata.collectionName,
+                                        CollectionService.compute_distribution(tokens))
             self.distributionDAO.save(distribution)
 
             self.jobDAO.update_status(collectionLoadJob, Status.FINISHED)
@@ -72,7 +70,7 @@ class CollectionService():
             self.jobDAO.update(collectionLoadJob)
 
     @staticmethod
-    def compute_distribution(tokens: list[Token], collectionSize: int):
+    def compute_distribution(tokens: list[Token]):
         traitsDistribution = {}
         errorCount = 0
         for token in tokens:
@@ -92,6 +90,7 @@ class CollectionService():
             distributionSize = 0    
             for traitName, count in distribution.items():
                 distributionSize += count
-            distribution["None"] = collectionSize - distributionSize
+            distribution["None"] = len(tokens) - distributionSize
+
         print("Encountered {} errors".format(errorCount))
         return traitsDistribution

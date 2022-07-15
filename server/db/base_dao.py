@@ -37,11 +37,11 @@ class BaseDAO(Generic[T]):
     def save_many(self, lst: list[T]) -> list[Id]:
         for object in lst:
             validate_has_id(object)
-        print("validated")
+        #print("validated")
         serialized = serialize(lst)
-        print("serialized")
+        #print("serialized")
         inserted = self.collection.insert_many(serialized)
-        print("inserted")
+        #print("inserted")
         return inserted
 
     def update(self, object: T):
