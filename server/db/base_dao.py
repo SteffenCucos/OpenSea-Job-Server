@@ -3,6 +3,7 @@ from typing import TypeVar, Generic
 T = TypeVar('T')
 
 from pymongo.collection import Collection
+from pymongo import UpdateOne
 
 from .dict_to_class import deserialize
 from .class_to_dict import serialize
@@ -47,6 +48,15 @@ class BaseDAO(Generic[T]):
     def update(self, object: T):
         validate_has_id(object)
         self.collection.update_one(get_id_criteria(object), get_update_query(object))
+
+    def update_request(self, object: T) -> UpdateOne:
+        return UpdateOne(get_id_criteria(object), get_update_query(object))
+
+    def update_many(self, lst: list[T]):
+        for object in lst:
+            validate_has_id(object)
+        
+        self.collection.bulk_write([self.update_request(object) for object in lst])
 
     def find_one_by_name(self, name: str) -> T:
         return self.find_one_by_condition({"name": name})
