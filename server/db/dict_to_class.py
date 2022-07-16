@@ -46,12 +46,12 @@ def deserialize_object(d: dict, classType: type):
     if len(hints) < len(arguments):
         return "All parameters must be typed"
 
-    if len(d) < len(hints):
-        return "Not enough parameters in dict"
-
     deserializedParameters = {}
     for varName, varType in hints.items():
-        value = d.get(varName)
+        if varName not in d.keys():
+            value = None
+        else:
+            value = d.get(varName)
         deserializedValue = deserialize(value, varType)
         deserializedParameters[varName] = deserializedValue
         
@@ -75,7 +75,7 @@ def deserialize_dict(d: dict, keyType: type, valueType: type):
     
 def deserialize(value: Any, classType: type):
     if value == None:
-        # Allow None values
+        # Allow None values for any type
         return None
     if is_primitive(classType):
         return classType(value)
