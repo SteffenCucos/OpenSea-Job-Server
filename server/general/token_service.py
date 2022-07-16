@@ -33,7 +33,6 @@ class TokenProssesor():
         self.traitsAddress = traitsAddress
         self.collectionLoadJob = collectionLoadJob
         self.save_batch = save_batch
-        self.tokenDAO = TokenDAO(get_tokens_collection(collectionLoadJob.collectionName))
         self.http = get_retry_http()
 
         self.lock = Lock()
@@ -45,23 +44,26 @@ class TokenProssesor():
             url = self.traitsAddress.format(tokenId)
             try:
                 response = self.http.get(url)
-                success = True
                 traits = deserialize(json.loads(response.text)["attributes"], list[Trait])
+                success = True
+                error = None
             except Exception as error:
-                print(error)
+                error = error
                 success = False
                 traits = None
 
+            token = Token(success, num=tokenId, url=url, traits=traits)
+            if error:
+                token.set_error(error)
+
             # Ensure strictly increasing counts
             self.lock.acquire()
-            token = Token(success, num=tokenId, url=url, traits=traits)
-            # Save tokens in batches
-            self.batch.append(token)
 
+            self.batch.append(token)
             if len(self.batch) % 25 == 0 or tokenId == self.collectionLoadJob.total:
                 print("{}: saving batch #{} size {}".format(self.collectionLoadJob.collectionName, self.batchNum[0], len(self.batch)))
                 self.batchNum[0] += 1
-                self.save_batch(self.batch, self.collectionLoadJob, self.tokenDAO)
+                self.save_batch(self.batch, self.collectionLoadJob)
                 self.batch.clear()
 
             self.lock.release()
@@ -77,7 +79,7 @@ class TokenProssesor():
         # There may be some unsaved tokens
         if len(self.batch) > 0:
             print("{}: saving batch #{} size {}".format(self.collectionLoadJob.collectionName, self.batchNum[0], len(self.batch)))
-            self.save_batch(self.batch, self.collectionLoadJob, self.tokenDAO)
+            self.save_batch(self.batch, self.collectionLoadJob)
 
         return tokens
 
@@ -102,7 +104,7 @@ class TokenService():
         collectionName = metadata.collectionName
         traitsAddress = self.get_token_uri(contractAddess, contractABI)
 
-        return TokenProssesor(traitsAddress, collectionLoadJob, self.save_batch)
+        return TokenProssesor(traitsAddress, collectionLoadJob, self.save_batch_for_job)
 
     def get_token_uri(self, contractAddress: str, contractABI: str) -> str:
         contract = self.w3.eth.contract(address = Web3.toChecksumAddress(contractAddress), abi = contractABI)
@@ -114,16 +116,30 @@ class TokenService():
 
         traitsAddress = traitsAddress[:lastIndex] + "{}" + traitsAddress[lastIndex + 1:]
         return traitsAddress
-
-    def save_batch(
+    
+    def save_batch_for_job(
         self,
         batch: list[Token],
-        collectionLoadJob: CollectionLoadJob,
-        tokenDAO: TokenDAO
+        collectionLoadJob: CollectionLoadJob
     ):
         #print("Starting Save")
-        tokenDAO.save_many(batch)
+        self.save_batch(batch, collectionLoadJob.collectionName)
         #print("Finished Save")
         collectionLoadJob.increment_loaded(len(batch))
         self.jobDAO.update(collectionLoadJob)
 
+    def save_batch(
+        self,
+        batch: list[Token],
+        collectionName: str
+    ):
+        tokenDAO = TokenDAO(get_tokens_collection(collectionName))
+        tokenDAO.save_many(batch)
+
+    def update_batch(
+        self,
+        batch: list[Token],
+        collectionName: str
+    ):
+        tokenDAO = TokenDAO(get_tokens_collection(collectionName))
+        tokenDAO.update_many(batch)
