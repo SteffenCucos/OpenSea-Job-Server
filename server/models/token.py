@@ -1,8 +1,10 @@
+
+import traceback
 from .trait import Trait
 from .id import Id
 
 class Token():
-    def __init__(self, success: bool, num: int, url: str, traits: list[Trait], _id: Id = None):
+    def __init__(self, success: bool, num: int, url: str, traits: list[Trait], error: str = None, rarity: float = None, _id: Id = None):
         if _id == None:
             self._id = Id(str(num))
         else:
@@ -11,7 +13,12 @@ class Token():
         self.num = num
         self.url = url
         self.traits = traits
+        self.error = error
+        self.rarity = rarity
         # Rarity is wrong right now?
+
+    def set_error(self, error: Exception):
+        self.error = ''.join(traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__))
 
     def __eq__(self, other):
          return self._id == other._id \

@@ -13,6 +13,7 @@ from models.distribution import Distribution
 
 from db.job_dao import JobDAO
 from db.distribution_dao import DistributionDAO
+from db.token_dao import TokenDAO
 
 
 from general.metadata_service import MetadataService
@@ -45,32 +46,53 @@ class CollectionService():
             collectionName = collectionLoadJob.collectionName
             self.jobDAO.update_status(collectionLoadJob, Status.PREPARING)
 
-            # Look for collection metadata already existing
-            # Load collection metadata into collections/metadata
-            # Set collectionSize & numLoaded fields
+            # Load metadata
             metadata = self.metadataService.get_metadata(collectionName)
             collectionLoadJob.total = metadata.collectionSize
             collectionLoadJob.status = Status.LOADING
             self.jobDAO.update(collectionLoadJob)
-            # Get tokens
+
+            # Load tokens
             tokenProssesor = self.tokenService.get_token_processor(collectionLoadJob)
             tokens = tokenProssesor.get_tokens(parallelism=20)
                 
             collectionLoadJob.progress = 1.0
             self.jobDAO.update(collectionLoadJob)
-
-            distribution = Distribution(metadata.collectionName,
-                                        CollectionService.compute_distribution(tokens))
+            
+            # Compute distribution
+            distribution = CollectionService.compute_distribution(metadata.collectionName, tokens)
             self.distributionDAO.save(distribution)
 
+            # Compute rarities
+            for token in tokens:
+                token.rarity = CollectionService.compute_token_rarity(token, distribution)
+            self.tokenService.update_batch(tokens, collectionName)
+
+            # Finish job
             self.jobDAO.update_status(collectionLoadJob, Status.FINISHED)
         except Exception as error:
             collectionLoadJob.set_error(error)
             collectionLoadJob.update_status(Status.ERROR)
             self.jobDAO.update(collectionLoadJob)
 
+
     @staticmethod
-    def compute_distribution(tokens: list[Token]):
+    def compute_token_rarity(token: Token, distribution: Distribution) -> float:
+        traitsDistribution = distribution.distribution
+
+        total = 0.0
+        for trait in token.traits:
+            traitName = trait.trait_type
+            traitValue = trait.value
+
+            numWithTrait = traitsDistribution[traitName][traitValue]
+            trait.rarity = numWithTrait / distribution.collectionSize
+            total += trait.rarity
+
+        return total / len(token.traits)
+
+    @staticmethod
+    def compute_distribution(collectionName: str, tokens: list[Token]) -> Distribution:
         traitsDistribution = {}
         errorCount = 0
         for token in tokens:
@@ -93,4 +115,4 @@ class CollectionService():
             distribution["None"] = len(tokens) - distributionSize
 
         print("Encountered {} errors".format(errorCount))
-        return traitsDistribution
+        return Distribution(collectionName, len(tokens), traitsDistribution)
