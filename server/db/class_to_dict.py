@@ -24,7 +24,7 @@ def serialize_list(list: list) -> list:
 
 def serialize(value: Any):
     if value is None:
-        return False
+        return None
     classType = type(value)
     if is_primitive(classType):
         return value

@@ -69,3 +69,6 @@ class BaseDAO(Generic[T]):
         if ret:
             return deserialize(value=ret, classType=self.classType)
         return None
+
+    def _serialize(self, object: object):
+        return serialize(object)
