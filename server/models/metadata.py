@@ -1,14 +1,11 @@
 
+from dataclasses import dataclass
 
-class Metadata():
-    def __init__(self, 
-        collectionName: str,
-        collectionSize: int,
-        contractAddress: str,
-        contractABI: str
-    ):
-        self._id = collectionName
-        self.collectionName = collectionName
-        self.collectionSize = collectionSize
-        self.contractAddress = contractAddress
-        self.contractABI = contractABI
+from .entity import Entity
+
+@dataclass
+class Metadata(Entity("collectionName")):
+    collectionName: str
+    collectionSize: int
+    contractAddress: str
+    contractABI: str

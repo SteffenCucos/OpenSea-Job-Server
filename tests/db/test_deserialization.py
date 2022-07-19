@@ -64,6 +64,8 @@ def test_deserialize_token():
     expected = Token(success=True, num=1, url="urlString", traits=[Trait(trait_type="size", value="10")])
     deserialized = deserialize(tokenData, Token)
     assert isinstance(deserialized, Token)
+    assert expected._id._id == "1"
+    assert deserialized._id._id == "1"
     assert deserialized == expected
 
 def test_deserialize_class_with_optional_field():

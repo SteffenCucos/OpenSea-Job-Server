@@ -1,6 +1,9 @@
+from dataclasses import dataclass
 from enum import Enum
 import traceback
+
 from models.id import Id, create_id
+from .entity import Entity
 
 class Status(Enum):
     ERROR = "ERROR"
@@ -15,25 +18,14 @@ class Status(Enum):
     def __str__(self):
         return self.value
 
-class CollectionLoadJob():
-    def __init__(self, 
-                collectionName: str, 
-                progress: float = 0.0,
-                loaded: int = 0,
-                total: int = 0,
-                status: Status = Status.CREATED, 
-                error: str = "",
-                _id: Id = None
-                ):
-        self.collectionName = collectionName
-        self.progress = progress
-        self.loaded = loaded
-        self.total = total
-        self.status = status.value
-        self.error = error
-        if _id == None:
-            _id = create_id()
-        self._id = _id
+@dataclass
+class CollectionLoadJob(Entity()):
+    collectionName: str
+    progress: float = 0.0
+    loaded: int = 0
+    total: int = 0
+    status: Status = Status.CREATED
+    error: str = ""
         
     def get_status(self) -> Status:
         return self.status
@@ -47,5 +39,3 @@ class CollectionLoadJob():
     def increment_loaded(self, newLoads):
         self.loaded += newLoads
         self.progress = self.loaded / self.total
-
-        

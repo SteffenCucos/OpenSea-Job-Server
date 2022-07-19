@@ -53,10 +53,13 @@ def test_serialize_token():
         "_id": "1",
         "num": 1,
         "url": "urlString",
+        "error": None,
+        "rarity": None,
         "traits": [
             {
                 "trait_type": "size",
-                "value": "10"
+                "value": "10",
+                "rarity": None
             }
         ]
     }
