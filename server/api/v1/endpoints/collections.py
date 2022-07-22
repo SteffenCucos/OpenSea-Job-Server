@@ -1,4 +1,4 @@
-import time
+from dataclasses import dataclass
 
 from models.token import Token
 from models.trait import Trait
@@ -15,9 +15,10 @@ from db.token_dao import TokenDAO
 from db.distribution_dao import DistributionDAO
 from db.metadata_dao import MetadataDAO
 
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import Depends
+from ...router import Router
 
-router = APIRouter(
+router = Router(
     prefix="/api/collections",
     tags=["collections"]
 )
@@ -58,7 +59,7 @@ def get_collection_distribution(
         return distribution
     
     raise NotFoundException("No distribution found for {}".format(collectionName))
-
+    
 @router.get("/{collectionName}/token/{tokenNumber}")
 def get_token(
     collectionName: str,
