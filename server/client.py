@@ -30,7 +30,8 @@ if __name__ == "__main__":
         "jpeg-cards",
         "justcubesnft",
         "otherdeed",
-        "lostpoets"
+        "lostpoets",
+        "fantasizenfts"
     ]
     results = {}
     job_ids = {}
@@ -46,9 +47,14 @@ if __name__ == "__main__":
             id = job_ids[collection]
             result = results[id]
             print_collection(result)
+
+        for collection in collections:
+            id = job_ids[collection]
+            result = results[id]
             if result["status"] in ["FINISHED", "ERROR"]:
                 continue
             results[id] = get_job(id)
+
         time.sleep(2)
         clear()
 
