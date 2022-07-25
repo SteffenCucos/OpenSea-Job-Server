@@ -6,7 +6,7 @@ from .id import Id, create_id
 def Entity(_id_source: str = None):
     class IdEntity:
         _id: Id
-        _created_time: Datetime
+        _created_date: Datetime
 
         def __post_init__(self):
             if _id_source:
@@ -14,6 +14,6 @@ def Entity(_id_source: str = None):
             else:
                 self._id = create_id()
 
-            self._created_time = Datetime.now()
+            self._created_date = Datetime.now()
 
     return IdEntity
