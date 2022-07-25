@@ -3,6 +3,7 @@ from typing import (
     Any,
     Type,
     Union,
+    Callable,
     get_args,
     get_origin,
     get_type_hints
@@ -79,164 +80,90 @@ def get_attributes(classType: type) -> dict[str, type]:
     
     return attributes
 
-def get_empty_constructor():
-    def __init__(self):
-        pass
+class Deserializer:
+    def __init__(self, middleware: dict[type, Callable[[object], type]] = []):
+        self.middleware = middleware
 
-    return __init__
+    def deserialize_enum(self, v: Any, enumType: Type[Enum]) -> Enum:
+        return enumType(v)
 
-def deserialize_object(d: dict, classType: type):
-    '''
-    Constructs an instance of the given type from the supplied dictionary.
+    def deserialize_simple_object(self, d: dict, classType: type):
+        '''
+        Constructs an instance of the given type from the supplied dictionary.
 
-    Any field in the dict that has no corresponding type will be set on
-    the object as its raw value.
+        Any field in the dict that has no corresponding type will be set on
+        the object as its raw value.
 
-    Currently does not support Union types
-    '''
-    # Avoid running the constructor by forcing an
-    # empty init function to run instead of the real init.
-    # This avoids any potential stateful code from running
-    # Think some field on the object that sets a value based
-    # on the day of the week
-    class_init = classType.__init__
-    classType.__init__ = get_empty_constructor()
-    cls = classType()
-    classType.__init__ = class_init
+        Currently does not support Union types
+        '''
+        attributes = get_attributes(classType)
 
-    attributes = get_attributes(classType)
+        type_hints = get_type_hints(classType.__init__)
+        if dataclasses.is_dataclass(classType):
+            type_hints.pop("return", None)
 
-    type_hints = get_type_hints(class_init)
-    if dataclasses.is_dataclass(classType):
-        type_hints.pop("return", None)
+        # Create an empty instance of classType
+        # Some types (ex: datetime.datetime) prohibit this call
+        # and will need a custom deserializer
+        cls = object.__new__(classType)
 
-    # Sereialize any field that we can find a type hint for,
-    # otherwise set it to the raw primitve value
-    for name, value in d.items():
-        # Check if an attribute with the given name exists, but overrite 
-        # the type if it exists in the constructor type_hints
-        type = attributes.pop(name) if name in attributes.keys() else None
-        type = type_hints.pop(name) if name in type_hints.keys() else type
-        cls.__dict__[name] = deserialize(value, type) if type else value
+        # Sereialize any field that we can find a type hint for,
+        # otherwise set it to the raw primitve value
+        for name, value in d.items():
+            # Check if an attribute with the given name exists, but overrite
+            # the type if it exists in the constructor type_hints
+            type = attributes.pop(name) if name in attributes.keys() else None
+            type = type_hints.pop(name) if name in type_hints.keys() else type
+            cls.__dict__[name] = self.deserialize(value, type) if type else value
 
-    return cls
+        if len(attributes.keys()) + len(type_hints.keys()) > 0:
+            # There are attributes or init_parameters that weren't found in the dictionary
+            pass
 
-def deserialize_list(l: list, classType: type):
-    deserializedList = []
-    for value in l:
-        deserializedList.append(deserialize(value, classType))
+        return cls
 
-    return deserializedList
+    def deserialize_list(self, lst: list, classType: type):
+        deserializedList = []
+        for value in lst:
+            deserializedList.append(self.deserialize(value, classType))
 
-def deserialize_dict(d: dict, keyType: type, valueType: type):
-    deserializedDict = {}
-    for key, value in d.items():
-        deserializedKey = deserialize(key, keyType)
-        deserializedValue = deserialize(value, valueType)
-        deserializedDict[deserializedKey] = deserializedValue
+        return deserializedList
 
-    return deserializedDict
-    
-def deserialize(value: Any, classType: type):
-    if value == None:
-        # Allow None values for any type
-        return None
-    if is_primitive(classType):
-        return classType(value)
-    if is_enum(classType):
-        return classType(value)
-    if is_optional(classType):
-        # If the parameter is optional, unpack the optional type and deserialize that type
-        realType = classType.__args__[0]
-        return deserialize(value, realType)
-    if isinstance(classType, GenericAlias):
-        typeArgs = classType.__args__
-        originType = classType.__origin__
-        if originType == type([]): # list of some type
-            typeArg = typeArgs[0] # List paramaterization only takes 1 argument
-            return deserialize_list(value, typeArg)
-        else:
-            keyType = typeArgs[0]
-            valueType = typeArgs[1]
-            return deserialize_dict(value, keyType, valueType)
-    else:
-        return deserialize_object(value, classType)
+    def deserialize_dict(self, d: dict, keyType: type, valueType: type):
+        deserializedDict = {}
+        for key, value in d.items():
+            deserializedKey = self.deserialize(key, keyType)
+            deserializedValue = self.deserialize(value, valueType)
+            deserializedDict[deserializedKey] = deserializedValue
 
-if __name__ == "__main__":
+        return deserializedDict
 
-    aisle = [
-        {
-            "shoes" : [
-                {
-                    "size": 10,
-                    "name": "Airmax",
-                    "condition" : "Excellent"
-                }, {
-                    "size": 11,
-                    "name": "Jordan",
-                    "condition" : "Excellent"
-                },
-            ],
-            "rows": [{"1":1}, {"2":2}]
-        }, {
-            "shoes" : [
-                {
-                    "size": 5,
-                    "name": "Sketchers",
-                    "condition" : "Excellent"
-                },{
-                    "size": 6,
-                    "name": "Heelies",
-                    "condition" : "Excellent"
-                },
-            ],
-            "rows": [{"3":3}, {"4":4}]
-        },
-    ]
+    def deserialize(self, value: Any, classType: type):
+        if value is None:
+            # Allow None values
+            return None
+        if is_primitive(classType):
+            return classType(value)
+        if is_enum(classType):
+            return classType(value)
+        if is_optional(classType):
+            # If the parameter is optional, unpack the optional type and deserialize that type
+            realType = classType.__args__[0]
+            return self.deserialize(value, realType)
+        if isinstance(classType, GenericAlias):
+            typeArgs = classType.__args__
+            originType = classType.__origin__
+            if originType is list:  # list of some type
+                typeArg = typeArgs[0]  # List paramaterization only takes 1 argument
+                return self.deserialize_list(value, typeArg)
+            else:
+                keyType = typeArgs[0]
+                valueType = typeArgs[1]
+                return self.deserialize_dict(value, keyType, valueType)
+        if (deserializer := self.middleware.get(classType, None)) is not None:
+            return deserializer(value)
 
-    from enum import Enum
+        return self.deserialize_simple_object(value, classType)
 
-    class Condition(Enum):
-        EXCELENT = "Excellent"
-        GOOD = "Good"
-        BAD = "Bad"
-        AWFUL = "Awful"
 
-    class ShoeBox():
-        def __init__(self, size: int, name: str, condition: Condition):
-            self.size = size
-            self.name = name
-            self.condition = condition
-        
-        def __str__(self):
-            return "{} {} in {} condition".format(self.size, self.name, self.condition)
-
-    class Shelf():
-        def __init__(self, shoes: list[ShoeBox], rows: list[dict[str,int]]):
-            self.shoes = shoes
-            self.rows = rows
-        def __str__(self):
-            s = ""
-            for shoe in self.shoes:
-                s += str(shoe) + "\n"
-            s += str(self.rows)
-            return s
-        
-    from models.token import Token
-    data = {
-        "success": True,
-        "_id": "1",
-        "num": 1,
-        "url": "https://ipfs.io/ipfs/QmXQyUWciz8zLhtkfsFDHUyhzEezqaeA3Hw8wYVBPNviNa/1",
-        "traits": [{"trait_type": "BACKGROUND", "value": "Aquamarine", "rarity": 0.10275}, {"trait_type": "BODY", "value": "Blue Grey", "rarity": 0.050125}, {"trait_type": "Horn", "value": "Pearl Stud", "rarity": 0.024625}, {"trait_type": "Mouth", "value": "Grin 1", "rarity": 0.068}, {"trait_type": "EYE", "value": "Hypnotized", "rarity": 0.07625}],
-        "rarity": 0.28890000000000005
-    }
-
-    token = deserialize(data, Token)
-    print(token.__dict__)
-    #print(des)
-    #print(json.dumps(des))
-    #for shelf in des:
-    #    print(shelf)
-    
-    
+default_deserializer = Deserializer(middleware={})

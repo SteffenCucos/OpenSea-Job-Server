@@ -8,7 +8,7 @@ from .serialization_helpers import (
     TestEnum
 )
 
-from server.db.dict_to_class import deserialize
+from server.db.dict_to_class import default_deserializer as deserializer
 
 PRIMITIVE_DATA = [
     (True, bool),
@@ -18,7 +18,7 @@ PRIMITIVE_DATA = [
 ]
 @pytest.mark.parametrize("value, type", PRIMITIVE_DATA)
 def test_deserialize_primitive(value, type):
-    deserialized = deserialize(value, type)
+    deserialized = deserializer.deserialize(value, type)
     assert deserialized == value
 
 ENUM_DATA = [
@@ -28,24 +28,24 @@ ENUM_DATA = [
 @pytest.mark.parametrize("value, expected", ENUM_DATA)
 def test_deserialize_enum(value, expected):
     print(value, expected)
-    assert deserialize(value, TestEnum) == expected
+    assert deserializer.deserialize(value, TestEnum) == expected
 
 def test_deserialize_list():
     lst = [1, 2, 3]
     expected = [1, 2, 3]
-    assert deserialize(lst, list[int]) == expected
+    assert deserializer.deserialize(lst, list[int]) == expected
 
 def test_deserialize_dict():
     dct = {"Key": "Value"}
     expected = {"Key": "Value"}
-    assert deserialize(dct, dict[str,str]) == expected
+    assert deserializer.deserialize(dct, dict[str,str]) == expected
 
 def test_deserialize_object():
     dct = {"dummyValue": "Value"}
     expected = DummyClass("Value")
-    deserialized = deserialize(dct, DummyClass)
+    deserialized = deserializer.deserialize(dct, DummyClass)
     assert isinstance(deserialized, DummyClass)
-    assert deserialize(dct, DummyClass) == expected
+    assert deserializer.deserialize(dct, DummyClass) == expected
 
 def test_deserialize_token():
     tokenData = {
@@ -62,7 +62,7 @@ def test_deserialize_token():
     }
 
     expected = Token(success=True, num=1, url="urlString", traits=[Trait(trait_type="size", value="10")])
-    deserialized = deserialize(tokenData, Token)
+    deserialized = deserializer.deserialize(tokenData, Token)
     assert isinstance(deserialized, Token)
     assert expected._id._id == "1"
     assert deserialized._id._id == "1"
