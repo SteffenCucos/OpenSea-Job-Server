@@ -21,8 +21,6 @@ from general.token_service import TokenService
 
 import logging
 
-from db.mongodb import get_tokens_collection
-
 logger = logging.getLogger(__name__) 
 
 class CollectionService():
@@ -54,7 +52,7 @@ class CollectionService():
 
             # Load tokens
             tokenProssesor = self.tokenService.get_token_processor(collectionLoadJob)
-            tokens = tokenProssesor.get_tokens(parallelism=20)
+            tokens = tokenProssesor.get_tokens(parallelism=10)
                 
             collectionLoadJob.progress = 1.0
             self.jobDAO.update(collectionLoadJob)
@@ -78,6 +76,9 @@ class CollectionService():
 
     @staticmethod
     def compute_token_rarity(token: Token, distribution: Distribution) -> float:
+        if token.error:
+            return 0.0
+
         traitsDistribution = distribution.distribution
 
         total = 0.0
