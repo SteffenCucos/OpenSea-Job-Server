@@ -1,5 +1,5 @@
 from pymongo.collection import Collection
-from fastapi import Depends, Path
+from fastapi import Depends
 
 from models.token import Token
 
@@ -11,5 +11,4 @@ class TokenDAO(BaseDAO):
     Responsible for manipulating the collections/jobs Collection
     '''
     def __init__(self, tokensCollection: Collection = Depends(get_tokens_collection)):
-        self.collection = tokensCollection
-        self.classType = Token
+        super().__init__(tokensCollection, Token)

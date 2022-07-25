@@ -11,5 +11,4 @@ class DistributionDAO(BaseDAO):
     Responsible for manipulating the collections/distributions Collection
     '''
     def __init__(self, distributionsCollection: Collection = Depends(get_distributions_collection)):
-        self.collection = distributionsCollection
-        self.classType = Distribution
+        super().__init__(distributionsCollection, Distribution)

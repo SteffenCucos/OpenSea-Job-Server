@@ -1,6 +1,6 @@
 import json
 
-from db.dict_to_class import deserialize
+from db.dict_to_class import default_deserializer
 
 class Etherscan(object):
     def __init__(self, apikey: str):
@@ -20,7 +20,7 @@ class Credentials(object):
 def fromFile(credentialsPath: str) -> Credentials:
     with open(credentialsPath, "rb") as credentialsFile:
         credentialsJson = json.loads(credentialsFile.read())
-        return deserialize(credentialsJson, Credentials)
+        return default_deserializer.deserialize(credentialsJson, Credentials)
 
 def get_credentials() -> Credentials:
     try:

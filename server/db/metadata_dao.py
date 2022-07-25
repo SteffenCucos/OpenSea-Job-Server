@@ -13,5 +13,4 @@ class MetadataDAO(BaseDAO):
     Responsible for manipulating the collections/metadata Collection
     '''
     def __init__(self, metadataCollection: Collection = Depends(get_metadata_collection)):
-        self.collection = metadataCollection
-        self.classType = Metadata
+        super().__init__(metadataCollection, Metadata)

@@ -5,8 +5,8 @@ from fastapi.responses import JSONResponse
 
 from starlette.requests import Request
 
-from db.class_to_dict import serialize
-
+from db.serializing_middleware import get_application_serializer
+serializer = get_application_serializer()
 
 # Custom router that runs simpler serialization logic to avoid certain
 # pitfalls of FastAPIs standard serialization scheme. The specific use
@@ -46,7 +46,7 @@ class Router(APIRouter):
     def get_serialize_wrapper(func):
         def json_serialize(request: Request, *positional, **named):
             result = func(*positional, **named)
-            return JSONResponse(content=serialize(result))
+            return JSONResponse(content=serializer.serialize(result))
 
         Router.fix_signature(json_serialize, func)
 

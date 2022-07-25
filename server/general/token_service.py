@@ -20,7 +20,8 @@ from general.http import get_retry_http
 from db.token_dao import TokenDAO
 from db.job_dao import JobDAO
 from db.mongodb import get_tokens_collection
-from db.dict_to_class import deserialize
+from db.serializing_middleware import get_application_deserializer
+deserializer = get_application_deserializer()
 
 from requests.sessions import Session
 
@@ -45,7 +46,7 @@ class TokenProssesor():
             error = None
             try:
                 response = self.http.get(url)
-                traits = deserialize(json.loads(response.text)["attributes"], list[Trait])
+                traits = deserializer.deserialize(json.loads(response.text)["attributes"], list[Trait])
                 success = True
                 error = None
             except Exception as e:

@@ -11,8 +11,7 @@ class JobDAO(BaseDAO):
     Responsible for manipulating the collections/jobs Collection
     '''
     def __init__(self, jobsCollection: Collection = Depends(get_jobs_collection)):
-        self.collection = jobsCollection
-        self.classType = CollectionLoadJob
+        super().__init__(jobsCollection, CollectionLoadJob)
 
     def update_status(self, job: CollectionLoadJob, status: Status):
         job.update_status(status)
