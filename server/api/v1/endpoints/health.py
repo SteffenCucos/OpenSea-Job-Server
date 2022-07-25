@@ -1,7 +1,8 @@
 from pymongo.collection import Collection
 
-from fastapi import APIRouter, Depends
-router = APIRouter(
+from ...router import Router
+
+router = Router(
     prefix="/api/health",
     tags=["health"]
 )

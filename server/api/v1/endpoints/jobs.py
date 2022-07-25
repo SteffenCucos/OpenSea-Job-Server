@@ -4,9 +4,11 @@ from db.job_dao import JobDAO
 
 from api.exceptions.not_found_exception import NotFoundException
 
+from fastapi import Depends
 
-from fastapi import APIRouter, Depends
-router = APIRouter(
+from ...router import Router
+
+router = Router(
     prefix="/api/jobs",
     tags=["jobs"]
 )
@@ -18,6 +20,6 @@ def get_status(
 ) -> CollectionLoadJob:
     # Check for a running job
     if job := jobDAO.find_one_by_id(jobId):
-        return jobDAO._serialize(job)
+        return job
         
     raise NotFoundException("No job was found with Id {}".format(jobId))
