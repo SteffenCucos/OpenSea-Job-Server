@@ -42,13 +42,14 @@ class TokenProssesor():
     def get_token_function(self):
         def get_token(tokenId: int) -> Token:
             url = self.traitsAddress.format(tokenId)
+            error = None
             try:
                 response = self.http.get(url)
                 traits = deserialize(json.loads(response.text)["attributes"], list[Trait])
                 success = True
                 error = None
-            except Exception as error:
-                error = error
+            except Exception as e:
+                error = e
                 success = False
                 traits = None
 
@@ -60,7 +61,7 @@ class TokenProssesor():
             self.lock.acquire()
 
             self.batch.append(token)
-            if len(self.batch) % 25 == 0 or tokenId == self.collectionLoadJob.total:
+            if len(self.batch) % 10 == 0 or tokenId == self.collectionLoadJob.total:
                 print("{}: saving batch #{} size {}".format(self.collectionLoadJob.collectionName, self.batchNum[0], len(self.batch)))
                 self.batchNum[0] += 1
                 self.save_batch(self.batch, self.collectionLoadJob)
