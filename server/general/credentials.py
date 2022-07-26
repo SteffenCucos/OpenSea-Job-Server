@@ -1,21 +1,22 @@
+from dataclasses import dataclass
 import json
 
 from db.dict_to_class import default_deserializer
 
-class Etherscan(object):
-    def __init__(self, apikey: str):
-        self.apikey = apikey
+@dataclass
+class Etherscan:
+    apikey: str
 
-class Infura(object):
-    def __init__(self, projectId: str, projectSecret: str, providerUrl: str):
-        self.projectId = projectId
-        self.projectSecret = projectSecret
-        self.providerUrl = providerUrl
+@dataclass
+class Infura:
+    projectId: str
+    projectSecret: str
+    providerUrl: str
 
-class Credentials(object):
-    def __init__(self, etherscan: Etherscan, infura: Infura):
-            self.etherscan = etherscan
-            self.infura = infura
+@dataclass
+class Credentials:
+    etherscan: Etherscan
+    infura: Infura
 
 def fromFile(credentialsPath: str) -> Credentials:
     with open(credentialsPath, "rb") as credentialsFile:
