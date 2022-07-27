@@ -7,6 +7,7 @@ def Entity(_id_source: str = None):
     class IdEntity:
         _id: Id
         _created_date: Datetime
+        _updated_date: Datetime
 
         def __post_init__(self):
             if _id_source:
@@ -14,6 +15,10 @@ def Entity(_id_source: str = None):
             else:
                 self._id = create_id()
 
+        def set_created_date(self):
             self._created_date = Datetime.now()
+
+        def set_updated_date(self):
+            self._updated_date = Datetime.now()
 
     return IdEntity
