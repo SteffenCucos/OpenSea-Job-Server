@@ -1,8 +1,8 @@
 
 from datetime import datetime
 
-from .dict_to_class import Deserializer
-from .class_to_dict import Serializer
+from pserialize.serialize import Serializer
+from pserialize.deserialize import Deserializer
 
 
 def get_application_serializer():

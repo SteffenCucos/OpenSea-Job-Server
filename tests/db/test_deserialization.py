@@ -8,7 +8,7 @@ from .serialization_helpers import (
     TestEnum
 )
 
-from server.db.dict_to_class import default_deserializer as deserializer
+from pserialize.deserialize import default_deserializer as deserializer
 
 PRIMITIVE_DATA = [
     (True, bool),

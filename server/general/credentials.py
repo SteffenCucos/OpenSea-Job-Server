@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 
-from db.dict_to_class import default_deserializer
+from pserialize.deserialize import default_deserializer
 
 @dataclass
 class Etherscan:

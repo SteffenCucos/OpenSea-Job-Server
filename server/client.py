@@ -31,7 +31,12 @@ if __name__ == "__main__":
         "justcubesnft",
         "otherdeed",
         "lostpoets",
-        "fantasizenfts"
+        "fantasizenfts",
+        "blvckgenesis",
+        "projectgodjiragenesis",
+        "cryptocitizensofficial",
+        "project-godjira-gen-2",
+        "murakami-flowers-2022-official"
     ]
     results = {}
     job_ids = {}

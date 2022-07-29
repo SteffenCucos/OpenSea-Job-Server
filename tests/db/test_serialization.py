@@ -5,7 +5,8 @@ from .serialization_helpers import (
     TestEnum
 )
 
-from server.db.class_to_dict import default_serializer as serializer
+from pserialize.serialize import default_serializer as serializer
+
 from server.models.token import Token
 from server.models.trait import Trait
 

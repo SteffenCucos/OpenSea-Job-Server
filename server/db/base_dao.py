@@ -20,7 +20,6 @@ class BaseDAO(Generic[T]):
         self.serializer = get_application_serializer()
         self.deserializer = get_application_deserializer()
 
-
     def save(self, object: T) -> Id:
         self.prep_for_save(object)
         return self.collection.insert_one(self.serializer.serialize(object)).inserted_id

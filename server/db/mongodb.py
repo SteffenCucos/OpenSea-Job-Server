@@ -5,7 +5,7 @@ from pymongo import MongoClient
 # In memory mongo client
 from pymongo_inmemory import MongoClient as MemClient
 
-client = MongoClient("mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb")
+client = MemClient("mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb")
 
 def get_jobs_collection() -> Collection:
     return get_general_database().get_collection("jobs")
