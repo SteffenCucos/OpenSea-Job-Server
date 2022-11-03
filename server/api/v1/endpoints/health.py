@@ -1,9 +1,11 @@
 from pymongo.collection import Collection
 
+from v1 import base_route
 from ...router import Router
 
+
 router = Router(
-    prefix="/api/health",
+    prefix= base_route + "/health",
     tags=["health"]
 )
 

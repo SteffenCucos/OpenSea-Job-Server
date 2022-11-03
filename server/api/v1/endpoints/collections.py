@@ -16,10 +16,12 @@ from db.distribution_dao import DistributionDAO
 from db.metadata_dao import MetadataDAO
 
 from fastapi import Depends
+
+from v1 import base_route
 from ...router import Router
 
 router = Router(
-    prefix="/api/collections",
+    prefix= base_route + "collections",
     tags=["collections"]
 )
 

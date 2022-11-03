@@ -6,10 +6,11 @@ from api.exceptions.not_found_exception import NotFoundException
 
 from fastapi import Depends
 
+from v1 import base_route
 from ...router import Router
 
 router = Router(
-    prefix="/api/jobs",
+    prefix= base_route + "/jobs",
     tags=["jobs"]
 )
 
