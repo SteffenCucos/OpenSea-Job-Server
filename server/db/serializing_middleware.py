@@ -1,32 +1,27 @@
 
 from datetime import datetime
+from typing import Callable
 
-from pserialize.serialize import Serializer
-from pserialize.deserialize import Deserializer
+from pserialize import Deserializer, Serializer
 
 
 def get_application_serializer():
-    def serialize_date(value: object):
-        return repr(value)
+    def serializer(obj: datetime, middleware: dict[type, Callable[[object], type]] = {}) -> str:
+        return obj.isoformat()
 
     return Serializer(
         middleware={
-            datetime: serialize_date
+            datetime: serializer
         }
     )
 
 
 def get_application_deserializer():
-    def deserialize_date(value: object):
-        arg_str = value.split("(")[1]
-        arg_str = arg_str.replace(")", "")
-        args = arg_str.strip(" ").split(",")
-        args = [int(arg) for arg in args]
-
-        return datetime(*args)
+    def deserializer(value: str, middleware: dict[type, Callable[[object], type]] = {}) -> datetime:
+        return datetime.fromisoformat(value)
         
     return Deserializer(
         middleware={
-            datetime: deserialize_date
+            datetime: deserializer
         }
     )
